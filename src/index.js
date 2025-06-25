@@ -1,25 +1,17 @@
-// src/index.js
-import 'core-js/stable';
-import 'regenerator-runtime/runtime';
-import React from 'react';
-import ReactDOM from 'react-dom';
-import App from './App'; // Import the main component
-import './styles.css'; // Import styles
+import { useState, useEffect, useRef } from 'react';
+import { createRoot } from 'react-dom/client';
+import App from './App';
+import './index.css';
 
-const root = document.getElementById('root');
+const container = document.getElementById('root');
+const root = createRoot(container);
 
-const render = (Component) => {
-  ReactDOM.render(<Component />, root);
-};
+root.render(<App />);
 
-// Initial render
-render(App);
-
-// Enable Hot Module Replacement (HMR)
+// Hot module replacement for development
 if (module.hot) {
   module.hot.accept('./App', () => {
     const NextApp = require('./App').default;
-
-    render(NextApp);
+    root.render(<NextApp />);
   });
 }
