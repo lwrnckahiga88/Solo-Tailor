@@ -3,24 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SoloTailor AI - Foot Scanning</title>
+    <title>SoloTailor AI - Perfect Foot Scanning</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        * {
+            box-sizing: border-box;
             margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f8f9fa;
             padding: 20px;
-            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #6d28d9;
+            margin-bottom: 8px;
+        }
+        
+        .scan-section {
+            max-width: 500px;
+            margin: 0 auto;
         }
         
         .scan-container {
             position: relative;
             width: 100%;
-            max-width: 500px;
-            margin: 0 auto;
             background-color: #000;
-            border-radius: 10px;
+            border-radius: 12px;
             overflow: hidden;
-            aspect-ratio: 4/3;
+            aspect-ratio: 3/4; /* Better for foot scanning */
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         
         #camera-feed {
@@ -28,7 +48,7 @@
             height: 100%;
             display: block;
             object-fit: cover;
-            transform: scaleX(-1); /* Mirror the camera feed */
+            transform: scaleX(-1); /* Mirror effect */
         }
         
         .scan-overlay {
@@ -38,110 +58,200 @@
             width: 100%;
             height: 100%;
             pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
         }
         
-        .foot-outline {
+        .foot-guidelines {
+            position: absolute;
+            top: 10%;
+            left: 15%;
             width: 70%;
             height: 80%;
             border: 3px dashed rgba(109, 40, 217, 0.8);
-            border-radius: 20% 20% 50% 50%;
-            position: relative;
+            border-radius: 40% 40% 20% 20%;
             animation: pulse 2s infinite;
         }
         
         @keyframes pulse {
-            0% { border-color: rgba(109, 40, 217, 0.8); }
+            0%, 100% { border-color: rgba(109, 40, 217, 0.8); }
             50% { border-color: rgba(139, 92, 246, 0.8); }
-            100% { border-color: rgba(109, 40, 217, 0.8); }
         }
         
-        .scan-instructions {
-            position: absolute;
-            bottom: 20px;
-            color: white;
-            text-align: center;
-            width: 100%;
-            padding: 0 20px;
-            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
-        }
-        
-        .position-markers {
+        .alignment-markers {
             position: absolute;
             width: 100%;
             height: 100%;
-            top: 0;
-            left: 0;
         }
         
         .marker {
             position: absolute;
-            width: 20px;
-            height: 20px;
-            background-color: rgba(109, 40, 217, 0.5);
+            width: 16px;
+            height: 16px;
+            background-color: rgba(109, 40, 217, 0.6);
             border-radius: 50%;
+            transform: translate(-50%, -50%);
         }
         
-        .marker-1 { top: 20%; left: 20%; }
-        .marker-2 { top: 20%; right: 20%; }
-        .marker-3 { bottom: 20%; left: 50%; transform: translateX(-50%); }
+        .toe-marker {
+            top: 15%;
+            left: 50%;
+        }
+        
+        .heel-marker {
+            bottom: 10%;
+            left: 50%;
+        }
+        
+        .side-marker-left {
+            top: 50%;
+            left: 20%;
+        }
+        
+        .side-marker-right {
+            top: 50%;
+            right: 20%;
+        }
+        
+        .instructions {
+            text-align: center;
+            margin-top: 16px;
+            color: #555;
+            font-size: 15px;
+        }
+        
+        .action-btn {
+            display: block;
+            width: 100%;
+            max-width: 500px;
+            margin: 20px auto 0;
+            padding: 12px;
+            background-color: #6d28d9;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .action-btn:hover {
+            background-color: #5b21b6;
+        }
     </style>
 </head>
 <body>
-    <h1>SoloTailor AI</h1>
-    <p>Live foot scanning & 3D shoe customization</p>
+    <header>
+        <h1>SoloTailor AI</h1>
+        <p>Perfect foot scanning & 3D customization</p>
+    </header>
     
-    <h2>1. Live Foot Scan</h2>
-    
-    <div class="scan-container">
-        <video id="camera-feed" autoplay playsinline></video>
-        <div class="scan-overlay">
-            <div class="foot-outline">
-                <div class="position-markers">
-                    <div class="marker marker-1"></div>
-                    <div class="marker marker-2"></div>
-                    <div class="marker marker-3"></div>
+    <section class="scan-section">
+        <div class="scan-container">
+            <video id="camera-feed" autoplay playsinline></video>
+            <div class="scan-overlay">
+                <div class="foot-guidelines">
+                    <div class="alignment-markers">
+                        <div class="marker toe-marker"></div>
+                        <div class="marker heel-marker"></div>
+                        <div class="marker side-marker-left"></div>
+                        <div class="marker side-marker-right"></div>
+                    </div>
                 </div>
             </div>
-            <div class="scan-instructions">
-                <p>Position your foot within the outline</p>
-                <p>Align your heel with the bottom marker</p>
-            </div>
         </div>
-    </div>
-    
+        
+        <p class="instructions">
+            Align your foot with the markers:<br>
+            Toes at top • Heel at bottom • Sides centered
+        </p>
+        
+        <button class="action-btn" id="capture-btn">Capture Foot Scan</button>
+    </section>
+
     <script>
-        // Initialize camera
-        async function initCamera() {
+        // Camera setup with perfect alignment
+        async function setupCamera() {
             try {
+                const video = document.getElementById('camera-feed');
+                
+                // Get all camera devices
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                
+                // Try to find rear camera first
+                const rearCamera = videoDevices.find(device => 
+                    device.label.toLowerCase().includes('back') || 
+                    device.label.toLowerCase().includes('rear')
+                );
+                
                 const constraints = {
                     video: {
-                        facingMode: 'environment',
+                        deviceId: rearCamera ? { exact: rearCamera.deviceId } : undefined,
                         width: { ideal: 1280 },
-                        height: { ideal: 960 }
+                        height: { ideal: 960 },
+                        facingMode: rearCamera ? undefined : 'environment'
                     }
                 };
                 
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                const video = document.getElementById('camera-feed');
                 video.srcObject = stream;
                 
-                video.onloadedmetadata = () => {
-                    video.play().catch(err => {
-                        console.error("Video play error:", err);
-                    });
+                // Handle different device orientations
+                const handleOrientationChange = () => {
+                    const orientation = window.screen.orientation.type;
+                    let transform = 'scaleX(-1)'; // Always mirror
+                    
+                    if (orientation.includes('landscape')) {
+                        transform += ' rotate(90deg)';
+                    }
+                    
+                    video.style.transform = transform;
                 };
+                
+                // Initial orientation setup
+                handleOrientationChange();
+                
+                // Listen for orientation changes
+                window.screen.orientation?.addEventListener('change', handleOrientationChange);
+                
+                return new Promise((resolve) => {
+                    video.onloadedmetadata = () => {
+                        video.play().then(resolve).catch(err => {
+                            console.error("Video play error:", err);
+                            resolve();
+                        });
+                    };
+                });
+                
             } catch (err) {
-                console.error("Camera error:", err);
-                alert("Could not access camera. Please enable camera permissions.");
+                console.error("Camera setup error:", err);
+                alert("Camera access error. Please enable permissions and try again.");
+                throw err;
             }
         }
         
-        // Initialize on page load
-        window.addEventListener('DOMContentLoaded', initCamera);
+        // Initialize everything when DOM loads
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                await setupCamera();
+                
+                document.getElementById('capture-btn').addEventListener('click', () => {
+                    alert('Foot scan captured successfully!');
+                    // Here you would normally process the scan
+                });
+                
+            } catch (err) {
+                console.error("Initialization error:", err);
+            }
+        });
+        
+        // Clean up camera stream when leaving
+        window.addEventListener('beforeunload', () => {
+            const video = document.getElementById('camera-feed');
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+        });
     </script>
 </body>
 </html>
