@@ -4,9 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SoloTailor AI - Professional 3D Footwear Customization</title>
+    <!-- 3DLook SDK -->
+    <script src="https://sdk.3dlook.com/v1.2/3dlook-sdk.js"></script>
+    <!-- Three.js for 3D rendering -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/loaders/GLTFLoader.js"></script>
+    <!-- FingerprintJS for device identification -->
+    <script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@3/dist/fp.min.js"></script>
     <style>
         :root {
             --primary: #6d28d9;
@@ -15,6 +20,8 @@
             --dark: #1e293b;
             --light: #f8fafc;
             --gray: #94a3b8;
+            --error: #ef4444;
+            --warning: #f59e0b;
         }
 
         * {
@@ -39,6 +46,29 @@
         header {
             text-align: center;
             margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .user-profile {
+            position: absolute;
+            right: 0;
+            top: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .profile-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            cursor: pointer;
         }
 
         header h1 {
@@ -54,6 +84,35 @@
             padding: 2rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .scan-tips {
+            position: absolute;
+            right: 2rem;
+            top: 2rem;
+            background-color: var(--primary-light);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+        }
+
+        .scan-tips-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            background: white;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+            width: 300px;
+        }
+
+        .scan-tips:hover .scan-tips-content {
+            display: block;
         }
 
         .scan-container {
@@ -67,6 +126,8 @@
             width: 100%;
             border-radius: 0.5rem;
             display: block;
+            aspect-ratio: 4/3;
+            background: #000;
         }
 
         .scan-overlay {
@@ -268,17 +329,103 @@
             width: 0%;
             transition: width 0.3s ease;
         }
+
+        /* Notification system */
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transform: translateX(150%);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background-color: var(--secondary);
+        }
+
+        .notification.error {
+            background-color: var(--error);
+        }
+
+        .notification.warning {
+            background-color: var(--warning);
+        }
+
+        /* Size recommendation */
+        .size-recommendation {
+            background-color: #f0fdf4;
+            border-left: 4px solid var(--secondary);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 480px) {
+            .app-container {
+                padding: 1rem;
+            }
+            
+            header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .scan-section, .customization-section, .final-section {
+                padding: 1rem;
+            }
+        }
+
+        /* Animation for shoe display */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .floating {
+            animation: float 3s ease-in-out infinite;
+        }
     </style>
 </head>
 <body>
     <div class="app-container">
         <header>
+            <div class="user-profile">
+                <span id="user-name">Guest</span>
+                <div class="profile-avatar" id="user-avatar">G</div>
+            </div>
             <h1>SoloTailor AI</h1>
             <p>Professional 3D Footwear Customization</p>
         </header>
 
         <!-- Scanning Section -->
         <section class="scan-section" id="scan-section">
+            <div class="scan-tips">
+                Scanning Tips
+                <div class="scan-tips-content">
+                    <h4>For Best Results:</h4>
+                    <ul>
+                        <li>Stand on a flat, well-lit surface</li>
+                        <li>Wear form-fitting socks or bare feet</li>
+                        <li>Keep your foot within the outline</li>
+                        <li>Hold still during scanning</li>
+                        <li>Scan both feet for complete sizing</li>
+                    </ul>
+                </div>
+            </div>
+            
             <h2>1. 3D Foot Scanning</h2>
             <div class="scan-container">
                 <video id="camera-feed" autoplay playsinline></video>
@@ -289,6 +436,8 @@
             <div class="scan-instructions">
                 <p>Position your foot within the outline and hold still</p>
                 <button id="start-scan" class="btn btn-primary">Start 3D Scan</button>
+                <button id="scan-left-foot" class="btn btn-secondary hidden">Scan Left Foot</button>
+                <button id="scan-right-foot" class="btn btn-secondary hidden">Scan Right Foot</button>
             </div>
             
             <div id="scan-results" class="hidden">
@@ -309,10 +458,16 @@
                         <button id="rotate-left" title="Rotate Left">↩</button>
                         <button id="rotate-right" title="Rotate Right">↪</button>
                         <button id="reset-view" title="Reset View">⟲</button>
+                        <button id="toggle-animation" title="Toggle Animation">⏯</button>
                     </div>
                 </div>
                 
                 <div class="customization-panel">
+                    <div class="size-recommendation" id="size-recommendation">
+                        <h4>Recommended Size</h4>
+                        <p>Based on your scan: <strong id="recommended-size">US 9 / EU 42</strong></p>
+                    </div>
+                    
                     <div class="form-group">
                         <label for="shoe-style">Style</label>
                         <select id="shoe-style" class="form-control">
@@ -320,6 +475,8 @@
                             <option value="runner">Running Shoe</option>
                             <option value="dress">Dress Shoe</option>
                             <option value="boot">Boot</option>
+                            <option value="sandals">Sandals</option>
+                            <option value="custom">Custom Design</option>
                         </select>
                     </div>
                     
@@ -335,10 +492,35 @@
                             <option value="knit">Knit</option>
                             <option value="mesh">Mesh</option>
                             <option value="suede">Suede</option>
+                            <option value="vegan">Vegan Leather</option>
+                            <option value="recycled">Recycled Materials</option>
                         </select>
                     </div>
                     
+                    <div class="form-group">
+                        <label for="shoe-size">Size</label>
+                        <select id="shoe-size" class="form-control">
+                            <!-- Filled dynamically based on recommendation -->
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="shoe-width">Width</label>
+                        <select id="shoe-width" class="form-control">
+                            <option value="narrow">Narrow</option>
+                            <option value="standard" selected>Standard</option>
+                            <option value="wide">Wide</option>
+                            <option value="extra-wide">Extra Wide</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="custom-text">Custom Text (max 15 chars)</label>
+                        <input type="text" id="custom-text" maxlength="15" class="form-control" placeholder="Optional personalization">
+                    </div>
+                    
                     <button id="view-final" class="btn btn-primary">View Final Design</button>
+                    <button id="save-design" class="btn btn-secondary">Save Design</button>
                 </div>
             </div>
         </section>
@@ -356,12 +538,28 @@
                     <div id="foot-measurements" style="margin-bottom: 1.5rem;">
                         <!-- Filled by JavaScript -->
                     </div>
+                    <div class="form-group">
+                        <label for="customer-notes">Special Instructions</label>
+                        <textarea id="customer-notes" class="form-control" rows="3" placeholder="Any special requests for your order"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="delivery-option">Delivery Option</label>
+                        <select id="delivery-option" class="form-control">
+                            <option value="standard">Standard (5-7 business days)</option>
+                            <option value="express">Express (2-3 business days)</option>
+                            <option value="priority">Priority (1 business day)</option>
+                        </select>
+                    </div>
                     <button id="place-order" class="btn btn-primary">Place Order</button>
                     <button id="back-to-edit" class="btn btn-secondary">Edit Design</button>
+                    <button id="share-design" class="btn btn-secondary">Share Design</button>
                 </div>
             </div>
         </section>
     </div>
+
+    <!-- Notification container -->
+    <div id="notification-container"></div>
 
     <script>
         // Global variables
@@ -372,24 +570,88 @@
         const rotationSpeed = 0.02;
         const loader = new THREE.GLTFLoader();
         let footScanData = null;
+        let look3DSDK = null;
+        let isAnimating = false;
+        let animationId = null;
+        let userProfile = {
+            name: "Guest",
+            initials: "G",
+            sessionId: null,
+            savedDesigns: []
+        };
         
         // Model paths (replace with your actual Blender-exported GLB files)
         const MODEL_PATHS = {
             sneaker: 'models/sneaker.glb',
             runner: 'models/runner.glb',
             dress: 'models/dress_shoe.glb',
-            boot: 'models/boot.glb'
+            boot: 'models/boot.glb',
+            sandals: 'models/sandals.glb',
+            custom: 'models/custom.glb'
         };
 
-        // Foot Scanner Class
-        class FootScanner {
+        // Size conversion chart
+        const SIZE_CHART = {
+            us: {
+                min: 4,
+                max: 15,
+                increment: 0.5,
+                eu: size => size + 33,
+                uk: size => size - 0.5
+            },
+            eu: {
+                min: 35,
+                max: 48,
+                increment: 1,
+                us: size => size - 33,
+                uk: size => size - 33 - 0.5
+            },
+            uk: {
+                min: 3,
+                max: 14,
+                increment: 0.5,
+                us: size => size + 0.5,
+                eu: size => size + 33 + 0.5
+            }
+        };
+
+        // 3DLook Foot Scanner Integration
+        class FootScanner3DLook {
             constructor() {
                 this.initialized = false;
+                this.sdk = null;
+                this.scanResults = null;
+                this.currentFoot = 'right'; // Start with right foot
             }
             
             async init() {
                 try {
+                    // Initialize 3DLook SDK
+                    this.sdk = new window.Look3D({
+                        clientId: 'YOUR_3DLOOK_CLIENT_ID', // Replace with your actual client ID
+                        environment: 'sandbox', // or 'production' for live
+                        scanningType: 'foot'
+                    });
+                    
+                    // Set up event listeners
+                    this.setupEventListeners();
+                    
                     // Initialize camera
+                    await this.initCamera();
+                    
+                    this.initialized = true;
+                    showNotification('3DLook scanner ready', 'success');
+                    return true;
+                } catch (error) {
+                    console.error("3DLook initialization failed:", error);
+                    showNotification('Professional scanning unavailable', 'warning');
+                    this.showUploadOption();
+                    return false;
+                }
+            }
+            
+            async initCamera() {
+                try {
                     mediaStream = await navigator.mediaDevices.getUserMedia({ 
                         video: { 
                             facingMode: 'environment',
@@ -399,107 +661,228 @@
                     });
                     const videoElement = document.getElementById('camera-feed');
                     videoElement.srcObject = mediaStream;
-                    
-                    this.initialized = true;
                     return true;
-                } catch (err) {
-                    console.error("Scanner initialization failed:", err);
-                    this.showUploadOption();
+                } catch (error) {
+                    console.error("Camera access error:", error);
+                    showNotification('Camera access denied', 'error');
                     return false;
                 }
             }
             
-            showUploadOption() {
-                document.querySelector('.scan-instructions').innerHTML = `
-                    <p>Camera access denied. Please upload photos instead:</p>
-                    <input type="file" id="foot-upload" accept="image/*" multiple style="display: none;">
-                    <button class="btn btn-primary" onclick="document.getElementById('foot-upload').click()">Upload Foot Photos</button>
-                `;
+            setupEventListeners() {
+                this.sdk.on('scanning_started', () => {
+                    console.log("3DLook scanning started");
+                    document.getElementById('scan-results').classList.remove('hidden');
+                    document.getElementById('start-scan').classList.add('hidden');
+                    document.getElementById(`scan-${this.currentFoot}-foot`).classList.add('hidden');
+                    showNotification(`Scanning ${this.currentFoot} foot`, 'success');
+                });
                 
-                document.getElementById('foot-upload').addEventListener('change', this.handleFileUpload.bind(this));
-            }
-            
-            handleFileUpload(event) {
-                const files = event.target.files;
-                if (files.length > 0) {
-                    this.startManualScan(files);
-                }
-            }
-            
-            async startManualScan(files) {
-                document.getElementById('start-scan').disabled = true;
-                document.getElementById('scan-results').classList.remove('hidden');
+                this.sdk.on('scanning_progress', (progress) => {
+                    console.log(`Scanning progress: ${progress}%`);
+                    document.getElementById('scan-progress').style.width = `${progress}%`;
+                });
                 
-                // Simulate processing uploaded images
-                await this.simulateScanProgress();
+                this.sdk.on('scanning_completed', (results) => {
+                    console.log("Scanning completed", results);
+                    this.scanResults = results;
+                    this.processScanResults();
+                    
+                    // Check if we need to scan the other foot
+                    if (this.currentFoot === 'right') {
+                        this.currentFoot = 'left';
+                        document.getElementById('scan-left-foot').classList.remove('hidden');
+                        showNotification('Now scan your left foot', 'success');
+                    } else {
+                        showNotification('Both feet scanned successfully!', 'success');
+                    }
+                });
                 
-                // Generate mock foot data
-                footScanData = this.generateMockFootData();
-                
-                this.completeScan();
-            }
-            
-            async scanFoot() {
-                if (!this.initialized) {
-                    throw new Error("Scanner not initialized");
-                }
-                
-                document.getElementById('start-scan').disabled = true;
-                document.getElementById('scan-results').classList.remove('hidden');
-                
-                // Simulate scanning process with progress updates
-                await this.simulateScanProgress();
-                
-                // Generate mock foot data
-                footScanData = this.generateMockFootData();
-                
-                this.completeScan();
-            }
-            
-            async simulateScanProgress() {
-                return new Promise((resolve) => {
-                    const progressBar = document.getElementById('scan-progress');
-                    let progress = 0;
-                    const interval = setInterval(() => {
-                        progress += 5;
-                        progressBar.style.width = `${progress}%`;
-                        
-                        if (progress >= 100) {
-                            clearInterval(interval);
-                            resolve();
-                        }
-                    }, 150);
+                this.sdk.on('error', (error) => {
+                    console.error("3DLook scanning error:", error);
+                    showNotification(`Scanning error: ${error.message}`, 'error');
+                    this.resetScanUI();
                 });
             }
             
-            generateMockFootData() {
-                // In a real app, this would come from actual scanning
-                return {
-                    length: (24 + Math.random() * 4).toFixed(1), // cm (24-28cm range)
-                    width: (9 + Math.random() * 2).toFixed(1),  // cm (9-11cm range)
-                    archHeight: (2 + Math.random()).toFixed(1), // cm (2-3cm range)
-                    timestamp: new Date().toISOString()
+            async startScan() {
+                if (!this.initialized) {
+                    throw new Error("3DLook scanner not initialized");
+                }
+                
+                try {
+                    // Start the scanning process
+                    await this.sdk.startScanning({
+                        containerId: 'camera-feed',
+                        overlayId: 'foot-outline',
+                        instructions: {
+                            positioning: "Position your foot within the outline",
+                            scanning: "Hold still while we scan your foot"
+                        },
+                        foot: this.currentFoot
+                    });
+                } catch (error) {
+                    console.error("Failed to start scanning:", error);
+                    showNotification('Failed to start scanning', 'error');
+                    this.showUploadOption();
+                    throw error;
+                }
+            }
+            
+            processScanResults() {
+                // Extract measurements from 3DLook results
+                const measurements = this.scanResults.measurements || {};
+                footScanData = footScanData || {};
+                
+                footScanData[this.currentFoot] = {
+                    length: measurements.footLength?.value || 0,
+                    width: measurements.footWidth?.value || 0,
+                    archHeight: measurements.archHeight?.value || 0,
+                    timestamp: new Date().toISOString(),
+                    modelData: this.scanResults.model // 3D model data if available
                 };
+                
+                // Calculate average if both feet scanned
+                if (footScanData.left && footScanData.right) {
+                    footScanData.average = {
+                        length: (footScanData.left.length + footScanData.right.length) / 2,
+                        width: (footScanData.left.width + footScanData.right.width) / 2,
+                        archHeight: (footScanData.left.archHeight + footScanData.right.archHeight) / 2
+                    };
+                    
+                    this.displayFootMeasurements();
+                    this.calculateSizeRecommendation();
+                    this.completeScan();
+                } else {
+                    this.displayScanInstructions();
+                }
+            }
+            
+            displayScanInstructions() {
+                document.getElementById('scan-instructions').innerHTML = `
+                    <p>${this.currentFoot === 'left' ? 'Left' : 'Right'} foot scanned successfully</p>
+                    <button id="scan-${this.currentFoot}-foot" class="btn btn-primary">
+                        Scan ${this.currentFoot === 'left' ? 'Right' : 'Left'} Foot
+                    </button>
+                `;
+                
+                document.getElementById(`scan-${this.currentFoot}-foot`).addEventListener('click', () => {
+                    this.startScan();
+                });
+            }
+            
+            displayFootMeasurements() {
+                if (footScanData.average) {
+                    document.getElementById('foot-measurements').innerHTML = `
+                        <h4>Your Foot Measurements</h4>
+                        <p><strong>Length:</strong> ${footScanData.average.length.toFixed(1)} cm</p>
+                        <p><strong>Width:</strong> ${footScanData.average.width.toFixed(1)} cm</p>
+                        <p><strong>Arch Height:</strong> ${footScanData.average.archHeight.toFixed(1)} cm</p>
+                        <p><em>Based on average of both feet</em></p>
+                    `;
+                }
+            }
+            
+            calculateSizeRecommendation() {
+                if (!footScanData.average) return;
+                
+                // Simple size calculation (in a real app, use more sophisticated algorithm)
+                const footLength = footScanData.average.length;
+                const usSize = 3 + (footLength - 22) / 0.847; // Approximate conversion
+                const recommendedSize = Math.round(usSize * 2) / 2; // Round to nearest 0.5
+                
+                const euSize = SIZE_CHART.us.eu(recommendedSize).toFixed(0);
+                const ukSize = SIZE_CHART.us.uk(recommendedSize).toFixed(1);
+                
+                document.getElementById('recommended-size').textContent = 
+                    `US ${recommendedSize} / EU ${euSize} / UK ${ukSize}`;
+                
+                // Populate size dropdown
+                const sizeSelect = document.getElementById('shoe-size');
+                sizeSelect.innerHTML = '';
+                
+                for (let size = SIZE_CHART.us.min; size <= SIZE_CHART.us.max; size += SIZE_CHART.us.increment) {
+                    const option = document.createElement('option');
+                    option.value = size;
+                    option.textContent = `US ${size} (EU ${SIZE_CHART.us.eu(size).toFixed(0)})`;
+                    if (Math.abs(size - recommendedSize) < 0.3) {
+                        option.selected = true;
+                        option.textContent += ' - Recommended';
+                    }
+                    sizeSelect.appendChild(option);
+                }
             }
             
             completeScan() {
                 document.getElementById('scan-section').classList.add('hidden');
                 document.getElementById('customization-section').style.display = 'block';
                 initShoeViewer();
-                
-                // Update foot measurements display
-                this.displayFootMeasurements();
             }
             
-            displayFootMeasurements() {
-                if (footScanData) {
-                    document.getElementById('foot-measurements').innerHTML = `
-                        <h4>Your Foot Measurements</h4>
-                        <p><strong>Length:</strong> ${footScanData.length} cm</p>
-                        <p><strong>Width:</strong> ${footScanData.width} cm</p>
-                        <p><strong>Arch Height:</strong> ${footScanData.archHeight} cm</p>
-                    `;
-                }
+            resetScanUI() {
+                document.getElementById('start-scan').disabled = false;
+                document.getElementById('scan-results').classList.add('hidden');
+                document.getElementById('scan-progress').style.width = '0%';
+            }
+            
+            showUploadOption() {
+                document.querySelector('.scan-instructions').innerHTML = `
+                    <p>Alternative scanning method: Please upload photos of your feet</p>
+                    <input type="file" id="foot-upload" accept="image/*" multiple style="display: none;">
+                    <button class="btn btn-primary" onclick="document.getElementById('foot-upload').click()">
+                        Upload Foot Photos
+                    </button>
+                `;
+                
+                document.getElementById('foot-upload').addEventListener('change', (e) => {
+                    this.processUploadedImages(e.target.files);
+                });
+            }
+            
+            async processUploadedImages(files) {
+                if (!files || files.length === 0) return;
+                
+                document.getElementById('scan-results').classList.remove('hidden');
+                showNotification('Processing uploaded images', 'success');
+                
+                // Simulate processing (in real app, you would send to your backend)
+                await new Promise(resolve => {
+                    const interval = setInterval(() => {
+                        const progressBar = document.getElementById('scan-progress');
+                        const currentWidth = parseInt(progressBar.style.width) || 0;
+                        if (currentWidth >= 100) {
+                            clearInterval(interval);
+                            resolve();
+                        } else {
+                            progressBar.style.width = `${currentWidth + 10}%`;
+                        }
+                    }, 300);
+                });
+                
+                // Generate mock data from uploads
+                footScanData = {
+                    left: {
+                        length: (24 + Math.random() * 4).toFixed(1),
+                        width: (9 + Math.random() * 2).toFixed(1),
+                        archHeight: (2 + Math.random()).toFixed(1),
+                        timestamp: new Date().toISOString()
+                    },
+                    right: {
+                        length: (24 + Math.random() * 4).toFixed(1),
+                        width: (9 + Math.random() * 2).toFixed(1),
+                        archHeight: (2 + Math.random()).toFixed(1),
+                        timestamp: new Date().toISOString()
+                    },
+                    average: {
+                        length: (24 + Math.random() * 4).toFixed(1),
+                        width: (9 + Math.random() * 2).toFixed(1),
+                        archHeight: (2 + Math.random()).toFixed(1)
+                    }
+                };
+                
+                this.displayFootMeasurements();
+                this.calculateSizeRecommendation();
+                this.completeScan();
             }
         }
 
@@ -543,7 +926,12 @@
             
             // Animation loop
             function animate() {
-                requestAnimationFrame(animate);
+                animationId = requestAnimationFrame(animate);
+                
+                if (isAnimating && shoeModel) {
+                    shoeModel.rotation.y += 0.005;
+                }
+                
                 controls.update();
                 renderer.render(scene, camera);
             }
@@ -572,17 +960,32 @@
                 
                 // Apply current customization
                 updateShoeMaterials();
+                
+                // Add floating animation if enabled
+                if (isAnimating) {
+                    shoeModel.userData.floatAnimation = true;
+                }
             }, 1000);
         }
 
-        // Create a simple shoe model based on foot measurements
+        // Create a shoe model that adapts to foot measurements
         function createDynamicShoeModel(style) {
-            // Base dimensions
-            let length = footScanData ? parseFloat(footScanData.length) / 10 : 2.6; // Convert cm to Three.js units
-            let width = footScanData ? parseFloat(footScanData.width) / 10 : 1.0;
-            let height = footScanData ? parseFloat(footScanData.archHeight) / 5 : 0.5;
+            if (!footScanData?.average) {
+                footScanData = {
+                    average: {
+                        length: 26,
+                        width: 10,
+                        archHeight: 2.5
+                    }
+                };
+            }
             
-            // Adjust based on shoe style
+            // Base dimensions from scan data
+            let length = parseFloat(footScanData.average.length) / 10; // Convert cm to Three.js units
+            let width = parseFloat(footScanData.average.width) / 10;
+            let height = parseFloat(footScanData.average.archHeight) / 5;
+            
+            // Style adjustments
             switch(style) {
                 case 'runner':
                     height *= 1.2;
@@ -594,6 +997,9 @@
                 case 'boot':
                     height *= 1.5;
                     break;
+                case 'sandals':
+                    height *= 0.7;
+                    break;
                 default: // sneaker
                     height *= 1.1;
             }
@@ -601,10 +1007,28 @@
             // Create shoe geometry
             const shoeGeometry = new THREE.BoxGeometry(length, height, width * 1.3);
             
-            // Simple shape differentiation based on style
+            // Style-specific shaping
             if (style === 'sneaker' || style === 'runner') {
                 // Round the edges for sneakers/runners
                 shoeGeometry.computeVertexNormals();
+                for (let i = 0; i < shoeGeometry.attributes.position.count; i++) {
+                    const x = shoeGeometry.attributes.position.getX(i);
+                    const y = shoeGeometry.attributes.position.getY(i);
+                    const z = shoeGeometry.attributes.position.getZ(i);
+                    
+                    // Round the edges
+                    const radius = 0.1;
+                    if (Math.abs(x) > length/2 - radius && Math.abs(z) > width/2 - radius) {
+                        const dx = (Math.abs(x) - (length/2 - radius)) / radius;
+                        const dz = (Math.abs(z) - (width/2 - radius)) / radius;
+                        const d = Math.sqrt(dx*dx + dz*dz);
+                        if (d < 1) {
+                            const f = Math.pow(1 - d, 2);
+                            shoeGeometry.attributes.position.setY(i, y + f * 0.2);
+                        }
+                    }
+                }
+                shoeGeometry.attributes.position.needsUpdate = true;
             }
             
             const color = document.getElementById('shoe-color').value;
@@ -628,6 +1052,47 @@
             // Position the shoe
             shoeModel.position.y = 0;
             scene.add(shoeModel);
+            
+            // Add custom text if specified
+            addCustomTextToShoe();
+        }
+        
+        function addCustomTextToShoe() {
+            const customText = document.getElementById('custom-text').value.trim();
+            if (!customText || !shoeModel) return;
+            
+            // Remove previous text if exists
+            if (shoeModel.userData.textMesh) {
+                scene.remove(shoeModel.userData.textMesh);
+            }
+            
+            // In a real app, you would use Three.js text geometry
+            // For this example, we'll create a simple plane with text texture
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = document.getElementById('shoe-color').value;
+            ctx.font = 'Bold 40px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(customText, canvas.width/2, canvas.height/2 + 15);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const textMaterial = new THREE.MeshBasicMaterial({
+                map: texture,
+                transparent: true
+            });
+            
+            const textGeometry = new THREE.PlaneGeometry(1, 0.5);
+            const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+            
+            // Position text on the side of the shoe
+            textMesh.position.set(0, shoeModel.geometry.parameters.height/2 + 0.01, 0);
+            textMesh.rotation.x = -Math.PI / 2;
+            textMesh.scale.set(0.5, 0.5, 0.5);
+            
+            shoeModel.add(textMesh);
+            shoeModel.userData.textMesh = textMesh;
         }
 
         // Update shoe materials based on customization
@@ -636,9 +1101,13 @@
             
             const color = document.getElementById('shoe-color').value;
             const materialType = document.getElementById('shoe-material').value;
+            const customText = document.getElementById('custom-text').value.trim();
             
             shoeModel.traverse(function (child) {
                 if (child.isMesh) {
+                    // Skip the text mesh
+                    if (child === shoeModel.userData.textMesh) return;
+                    
                     // Create material based on selection
                     let materialParams = {
                         color: new THREE.Color(color),
@@ -655,6 +1124,22 @@
                     child.material = new THREE.MeshStandardMaterial(materialParams);
                 }
             });
+            
+            // Update custom text if it exists
+            if (customText && shoeModel.userData.textMesh) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 256;
+                canvas.height = 128;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = color;
+                ctx.font = 'Bold 40px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(customText, canvas.width/2, canvas.height/2 + 15);
+                
+                shoeModel.userData.textMesh.material.map.dispose();
+                shoeModel.userData.textMesh.material.map = new THREE.CanvasTexture(canvas);
+                shoeModel.userData.textMesh.material.needsUpdate = true;
+            }
         }
 
         // Initialize final product viewer
@@ -707,6 +1192,15 @@
             floor.receiveShadow = true;
             finalScene.add(floor);
             
+            // Add subtle floating animation
+            let floatTime = 0;
+            function floatAnimation() {
+                floatTime += 0.01;
+                finalShoe.position.y = Math.sin(floatTime) * 0.1;
+                requestAnimationFrame(floatAnimation);
+            }
+            floatAnimation();
+            
             // Controls
             finalControls = new THREE.OrbitControls(finalCamera, finalRenderer.domElement);
             finalControls.enableDamping = true;
@@ -729,53 +1223,210 @@
             const style = document.getElementById('shoe-style').options[document.getElementById('shoe-style').selectedIndex].text;
             const material = document.getElementById('shoe-material').options[document.getElementById('shoe-material').selectedIndex].text;
             const color = document.getElementById('shoe-color').value;
+            const size = document.getElementById('shoe-size').value;
+            const width = document.getElementById('shoe-width').options[document.getElementById('shoe-width').selectedIndex].text;
+            const customText = document.getElementById('custom-text').value.trim();
             
-            document.getElementById('design-specs').innerHTML = `
+            let specsHTML = `
                 <h4>Design Specifications</h4>
                 <p><strong>Style:</strong> ${style}</p>
                 <p><strong>Material:</strong> ${material}</p>
                 <p><strong>Color:</strong> <span style="display: inline-block; width: 15px; height: 15px; background: ${color}; border: 1px solid #ddd;"></span> ${color.toUpperCase()}</p>
+                <p><strong>Size:</strong> US ${size} (${width} width)</p>
             `;
+            
+            if (customText) {
+                specsHTML += `<p><strong>Custom Text:</strong> "${customText}"</p>`;
+            }
+            
+            document.getElementById('design-specs').innerHTML = specsHTML;
         }
 
-        // Show final product view
-        function showFinalProduct() {
-            document.getElementById('customization-section').style.display = 'none';
-            document.getElementById('final-section').style.display = 'block';
-            initFinalViewer();
+        // Show notification
+        function showNotification(message, type = 'success') {
+            const container = document.getElementById('notification-container');
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <span>${message}</span>
+            `;
+            
+            container.appendChild(notification);
+            
+            // Show notification
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 10);
+            
+            // Hide after 3 seconds
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    container.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+
+        // Initialize fingerprint for guest user
+        async function initUserSession() {
+            try {
+                const fpPromise = FingerprintJS.load();
+                const fp = await fpPromise;
+                const result = await fp.get();
+                
+                userProfile.sessionId = result.visitorId;
+                userProfile.initials = userProfile.sessionId.substring(0, 2).toUpperCase();
+                document.getElementById('user-avatar').textContent = userProfile.initials;
+            } catch (error) {
+                console.error("FingerprintJS failed:", error);
+                userProfile.sessionId = 'guest-' + Math.random().toString(36).substring(2, 9);
+            }
+        }
+
+        // Save current design
+        function saveCurrentDesign() {
+            const design = {
+                id: Date.now(),
+                timestamp: new Date().toISOString(),
+                style: document.getElementById('shoe-style').value,
+                color: document.getElementById('shoe-color').value,
+                material: document.getElementById('shoe-material').value,
+                size: document.getElementById('shoe-size').value,
+                width: document.getElementById('shoe-width').value,
+                customText: document.getElementById('custom-text').value,
+                footData: footScanData
+            };
+            
+            userProfile.savedDesigns.push(design);
+            showNotification('Design saved successfully!', 'success');
+        }
+
+        // Share current design
+        function shareCurrentDesign() {
+            const designSpecs = document.getElementById('design-specs').innerText;
+            const measurements = document.getElementById('foot-measurements').innerText;
+            
+            const shareText = `Check out my custom shoe design:\n\n${designSpecs}\n\n${measurements}\n\nCreated with SoloTailor AI`;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'My Custom Shoe Design',
+                    text: shareText,
+                    url: window.location.href
+                }).catch(err => {
+                    console.log('Error sharing:', err);
+                    showNotification('Sharing failed', 'error');
+                });
+            } else {
+                // Fallback for browsers without Web Share API
+                const shareUrl = `mailto:?subject=My Custom Shoe Design&body=${encodeURIComponent(shareText)}`;
+                window.open(shareUrl, '_blank');
+                showNotification('Share dialog opened', 'success');
+            }
+        }
+
+        // Place order
+        function placeOrder() {
+            const orderBtn = document.getElementById('place-order');
+            orderBtn.textContent = 'Processing...';
+            orderBtn.disabled = true;
+            
+            // In a real app, you would send this to your backend
+            const orderData = {
+                user: userProfile,
+                design: {
+                    style: document.getElementById('shoe-style').value,
+                    color: document.getElementById('shoe-color').value,
+                    material: document.getElementById('shoe-material').value,
+                    size: document.getElementById('shoe-size').value,
+                    width: document.getElementById('shoe-width').value,
+                    customText: document.getElementById('custom-text').value,
+                    notes: document.getElementById('customer-notes').value,
+                    delivery: document.getElementById('delivery-option').value
+                },
+                measurements: footScanData,
+                timestamp: new Date().toISOString()
+            };
+            
+            console.log("Order placed:", orderData);
+            
+            // Simulate processing
+            setTimeout(() => {
+                showNotification('Order placed successfully!', 'success');
+                orderBtn.textContent = 'Order Placed!';
+                
+                // In a real app, you would redirect to order confirmation
+            }, 2000);
         }
 
         // Event listeners
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize foot scanner
-            window.footScanner = new FootScanner();
-            footScanner.init();
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Initialize user session
+            await initUserSession();
+            
+            // Initialize 3DLook foot scanner
+            window.footScanner = new FootScanner3DLook();
+            await footScanner.init();
             
             // Start scan button
-            document.getElementById('start-scan').addEventListener('click', function() {
-                footScanner.scanFoot();
+            document.getElementById('start-scan').addEventListener('click', async function() {
+                try {
+                    this.disabled = true;
+                    await footScanner.startScan();
+                } catch (error) {
+                    console.error("Scan initiation failed:", error);
+                    this.disabled = false;
+                }
+            });
+            
+            // Left/right foot scan buttons
+            document.getElementById('scan-left-foot').addEventListener('click', async function() {
+                footScanner.currentFoot = 'left';
+                await footScanner.startScan();
+            });
+            
+            document.getElementById('scan-right-foot').addEventListener('click', async function() {
+                footScanner.currentFoot = 'right';
+                await footScanner.startScan();
             });
             
             // Customization controls
             document.getElementById('shoe-style').addEventListener('change', function() {
                 loadShoeModel(this.value);
             });
-            document.getElementById('shoe-color').addEventListener('input', updateShoeMaterials);
+            
+            document.getElementById('shoe-color').addEventListener('input', function() {
+                updateShoeMaterials();
+                // Update color preview in size recommendation
+                document.querySelector('#size-recommendation strong').style.color = this.value;
+            });
+            
             document.getElementById('shoe-material').addEventListener('change', updateShoeMaterials);
+            document.getElementById('custom-text').addEventListener('input', function() {
+                addCustomTextToShoe();
+                updateDesignSpecs();
+            });
             
             // Model controls
             document.getElementById('rotate-left').addEventListener('click', () => {
                 currentRotation -= rotationSpeed;
                 if (shoeModel) shoeModel.rotation.y = currentRotation;
             });
+            
             document.getElementById('rotate-right').addEventListener('click', () => {
                 currentRotation += rotationSpeed;
                 if (shoeModel) shoeModel.rotation.y = currentRotation;
             });
+            
             document.getElementById('reset-view').addEventListener('click', () => {
                 controls.reset();
                 currentRotation = 0;
                 if (shoeModel) shoeModel.rotation.y = 0;
+            });
+            
+            document.getElementById('toggle-animation').addEventListener('click', function() {
+                isAnimating = !isAnimating;
+                this.textContent = isAnimating ? '⏸' : '⏯';
             });
             
             // View final product button
@@ -787,20 +1438,23 @@
                 document.getElementById('customization-section').style.display = 'block';
             });
             
+            // Save design button
+            document.getElementById('save-design').addEventListener('click', saveCurrentDesign);
+            
+            // Share design button
+            document.getElementById('share-design').addEventListener('click', shareCurrentDesign);
+            
             // Place order button
-            document.getElementById('place-order').addEventListener('click', function() {
-                this.textContent = 'Processing...';
-                setTimeout(() => {
-                    alert('Order placed successfully! Your custom shoes will be manufactured based on your design and foot measurements.');
-                    this.textContent = 'Place Order';
-                }, 1500);
-            });
+            document.getElementById('place-order').addEventListener('click', placeOrder);
         });
 
-        // Clean up camera
+        // Clean up when page unloads
         window.addEventListener('beforeunload', function() {
             if (mediaStream) {
                 mediaStream.getTracks().forEach(track => track.stop());
+            }
+            if (animationId) {
+                cancelAnimationFrame(animationId);
             }
         });
     </script>
