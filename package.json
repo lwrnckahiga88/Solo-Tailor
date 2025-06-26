@@ -1,7 +1,20 @@
 {
-  "name": "solo-tailor",
-  "version": "0.1.0",
+  "name": "shoe-customizer-pwa",
+  "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": "18.17.0",
+    "npm": "9.6.7"
+  },
+  "scripts": {
+    "start": "cross-env NODE_ENV=development webpack serve --open",
+    "build": "webpack --config webpack.config.js --mode=production",
+    "dev": "cross-env NODE_ENV=development webpack serve --hot",
+    "clean": "rimraf dist .cache",
+    "test": "jest",
+    "predeploy": "npm run build",
+    "deploy": "netlify deploy --prod"
+  },
   "dependencies": {
     "@babel/runtime-corejs3": "^7.23.1",
     "@react-three/drei": "^9.94.3",
@@ -50,16 +63,8 @@
     "style-loader": "^3.3.3",
     "webpack": "^5.89.0",
     "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^4.15.1"
-  },
-  "scripts": {
-    "start": "cross-env NODE_ENV=development webpack serve --open",
-    "build": "webpack --config webpack.config.js --mode=production",
-    "dev": "cross-env NODE_ENV=development webpack serve --hot",
-    "clean": "rimraf dist .cache",
-    "test": "jest",
-    "predeploy": "npm run build",
-    "deploy": "netlify deploy --prod"
+    "webpack-dev-server": "^4.15.1",
+    "webpack-pwa-manifest": "^4.3.0"
   },
   "browserslist": {
     "production": [
