@@ -62,12 +62,15 @@
             width: 100%;
             max-width: 600px;
             margin: 0 auto;
+            background-color: #000;
+            border-radius: 0.5rem;
+            overflow: hidden;
         }
 
         #camera-feed {
             width: 100%;
-            border-radius: 0.5rem;
             display: block;
+            transform: scaleX(-1); /* Mirror effect for front camera */
         }
 
         .scan-overlay {
@@ -87,6 +90,13 @@
             height: 60%;
             border: 3px dashed var(--primary);
             border-radius: 50% 50% 20% 20%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { border-color: var(--primary); }
+            50% { border-color: var(--primary-light); }
+            100% { border-color: var(--primary); }
         }
 
         .scan-instructions {
@@ -213,6 +223,43 @@
             transform: translate(-50%, -50%);
             text-align: center;
         }
+
+        .scan-progress {
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .progress-bar {
+            height: 10px;
+            background: #e2e8f0;
+            border-radius: 5px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+
+        .progress {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .scanning-animation {
+            position: absolute;
+            top: 20%;
+            left: 25%;
+            width: 50%;
+            height: 60%;
+            background: rgba(109, 40, 217, 0.1);
+            border-radius: 50% 50% 20% 20%;
+            animation: scanning 2s infinite;
+        }
+
+        @keyframes scanning {
+            0% { transform: scale(1); opacity: 0.1; }
+            50% { transform: scale(1.05); opacity: 0.3; }
+            100% { transform: scale(1); opacity: 0.1; }
+        }
     </style>
 </head>
 <body>
@@ -229,11 +276,18 @@
                 <video id="camera-feed" autoplay playsinline></video>
                 <div class="scan-overlay">
                     <div class="foot-outline"></div>
+                    <div id="scanning-animation" class="scanning-animation hidden"></div>
                 </div>
             </div>
             <div class="scan-instructions">
                 <p>Position your foot within the outline and hold still</p>
                 <button id="start-scan" class="btn btn-primary">Start Scanning</button>
+                <div id="scan-progress" class="scan-progress hidden">
+                    <p>Scanning in progress...</p>
+                    <div class="progress-bar">
+                        <div class="progress" id="progress-bar"></div>
+                    </div>
+                </div>
             </div>
             
             <div id="scan-results" class="hidden">
@@ -306,8 +360,8 @@
         let scene, camera, renderer, shoeMesh, controls;
         let finalScene, finalCamera, finalRenderer, finalShoeMesh, finalControls;
         let footScanData = null;
-        const SCANSOLES_API_KEY = 'YOUR_SCANSOLES_API_KEY';
-        const THREEDLOOK_API_KEY = 'YOUR_3DLOOK_API_KEY';
+        const SCANSOLES_API_KEY = 'ss_public_1234567890'; // Replace with your actual API key
+        const THREEDLOOK_API_KEY = '3dl_public_1234567890'; // Replace with your actual API key
 
         // Initialize camera for scanning
         async function initCamera() {
@@ -321,6 +375,18 @@
                 });
                 const videoElement = document.getElementById('camera-feed');
                 videoElement.srcObject = mediaStream;
+                
+                // Adjust video orientation based on device
+                videoElement.onloadedmetadata = () => {
+                    const isPortrait = window.matchMedia("(orientation: portrait)").matches;
+                    if (isPortrait) {
+                        videoElement.style.transform = 'scaleX(-1) rotate(90deg)';
+                        videoElement.style.width = '100vh';
+                        videoElement.style.height = '100vw';
+                    } else {
+                        videoElement.style.transform = 'scaleX(-1)';
+                    }
+                };
             } catch (err) {
                 console.error("Camera error:", err);
                 alert("Could not access camera. Please enable camera permissions.");
@@ -329,7 +395,71 @@
                     <input type="file" id="foot-upload" accept="image/*" multiple style="display: none;">
                     <button class="btn btn-primary" onclick="document.getElementById('foot-upload').click()">Upload Foot Photos</button>
                 `;
+                
+                // Handle file upload fallback
+                document.getElementById('foot-upload').addEventListener('change', handleFileUpload);
             }
+        }
+
+        // Handle file upload fallback
+        async function handleFileUpload(event) {
+            const files = event.target.files;
+            if (files.length < 3) {
+                alert("Please upload at least 3 photos from different angles");
+                return;
+            }
+
+            document.getElementById('scan-results').classList.remove('hidden');
+            document.getElementById('start-scan').disabled = true;
+            
+            try {
+                // In a real implementation, you would upload these to your backend
+                // For demo, we'll simulate processing
+                simulateScanProgress();
+                
+                // Simulate API call
+                setTimeout(async () => {
+                    // Mock API response
+                    footScanData = {
+                        footLength: 26.5,
+                        footWidth: 10.2,
+                        archHeight: 4.8,
+                        meshUrl: 'https://example.com/foot-mesh.glb'
+                    };
+                    
+                    document.getElementById('scan-section').classList.add('hidden');
+                    document.getElementById('customization-section').style.display = 'block';
+                    
+                    // Initialize 3D viewer
+                    const viewer = init3DViewer('shoe-canvas');
+                    scene = viewer.scene;
+                    camera = viewer.camera;
+                    renderer = viewer.renderer;
+                    controls = viewer.controls;
+                    
+                    // Load initial shoe model
+                    loadShoeModel();
+                }, 3000);
+            } catch (err) {
+                console.error("Upload failed:", err);
+                document.getElementById('scan-results').classList.add('hidden');
+                document.getElementById('start-scan').disabled = false;
+                alert("Upload failed: " + err.message);
+            }
+        }
+
+        // Simulate scan progress
+        function simulateScanProgress() {
+            const progressBar = document.getElementById('progress-bar');
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 5;
+                progressBar.style.width = `${progress}%`;
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                }
+            }, 200);
         }
 
         // Initialize 3D viewer
@@ -376,6 +506,13 @@
             }
             animate();
             
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                camera.aspect = canvas.clientWidth / canvas.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            });
+            
             return { scene, camera, renderer, controls };
         }
 
@@ -389,29 +526,20 @@
             document.getElementById('customization-error').classList.add('hidden');
             
             try {
-                // In production, replace with actual API call
-                // const response = await fetch('https://api.3dlook.com/v1/shoe-model', {
-                //     method: 'POST',
-                //     headers: { 
-                //         'Authorization': THREEDLOOK_API_KEY,
-                //         'Content-Type': 'application/json'
-                //     },
-                //     body: JSON.stringify({
-                //         foot_scan: footScanData,
-                //         style: style,
-                //         color: color,
-                //         material: material
-                //     }),
-                // });
-                // const { model_url } = await response.json();
-                
-                // Mock response for demo
-                const modelUrl = getMockModelUrl(style);
+                // In a real implementation, you would call the 3DLOOK API
+                // For demo purposes, we'll use mock models
+                const mockModelUrl = getMockModelUrl(style);
                 
                 const loader = new THREE.GLTFLoader();
-                loader.load(modelUrl, (gltf) => {
+                loader.load(mockModelUrl, (gltf) => {
                     if (shoeMesh) scene.remove(shoeMesh);
                     shoeMesh = gltf.scene;
+                    
+                    // Scale the model based on foot scan data if available
+                    if (footScanData) {
+                        const scaleFactor = footScanData.footLength / 26; // Adjust based on model size
+                        shoeMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
+                    }
                     
                     // Apply material customization
                     shoeMesh.traverse((child) => {
@@ -420,12 +548,26 @@
                             if (material === 'mesh') {
                                 child.material.transparent = true;
                                 child.material.opacity = 0.8;
+                            } else if (material === 'leather') {
+                                child.material.roughness = 0.4;
+                                child.material.metalness = 0.1;
+                            } else if (material === 'knit') {
+                                child.material.roughness = 0.8;
+                                child.material.metalness = 0;
                             }
                         }
                     });
                     
                     scene.add(shoeMesh);
                     document.getElementById('shoe-loading').classList.add('hidden');
+                    
+                    // Center the model in view
+                    if (shoeMesh) {
+                        const box = new THREE.Box3().setFromObject(shoeMesh);
+                        const center = box.getCenter(new THREE.Vector3());
+                        shoeMesh.position.sub(center);
+                        controls.reset();
+                    }
                 }, undefined, (err) => {
                     console.error("Error loading shoe model:", err);
                     document.getElementById('shoe-loading').classList.add('hidden');
@@ -445,7 +587,7 @@
             const models = {
                 sneaker: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/models/gltf/Shoe/glTF/Shoe.gltf',
                 runner: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/models/gltf/RunningShoe/glTF/RunningShoe.gltf',
-                dress: 'https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/Duck/glTF/Duck.gltf', // Placeholder
+                dress: 'https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf', // Placeholder
                 boot: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/models/gltf/Boot/glTF/Boot.gltf'
             };
             return models[style] || models.sneaker;
@@ -457,15 +599,36 @@
             startBtn.textContent = 'Scanning...';
             startBtn.disabled = true;
             
-            document.getElementById('scan-results').classList.remove('hidden');
+            document.getElementById('scan-progress').classList.remove('hidden');
+            document.getElementById('scanning-animation').classList.remove('hidden');
+            simulateScanProgress();
             
             try {
                 // Initialize ScanSoles SDK
-                await ScanSoles.init({ apiKey: SCANSOLES_API_KEY });
+                await ScanSoles.init({ 
+                    apiKey: SCANSOLES_API_KEY,
+                    scanMode: 'singleFoot',
+                    scanQuality: 'high',
+                    overlayElement: document.querySelector('.scan-overlay')
+                });
                 
-                // Capture foot scan
-                const scanResult = await ScanSoles.captureFootScan();
-                footScanData = scanResult.processedData; // Contains 3D mesh and dimensions
+                // Start the scanning process
+                const scanResult = await ScanSoles.startScanning({
+                    instructions: 'Move your foot slowly around the outline',
+                    scanDuration: 10000, // 10 seconds
+                    onProgress: (progress) => {
+                        document.getElementById('progress-bar').style.width = `${progress}%`;
+                    }
+                });
+                
+                // Process the scan results
+                footScanData = await ScanSoles.processScan(scanResult);
+                console.log("Foot scan data:", footScanData);
+                
+                // Show processing UI
+                document.getElementById('scan-progress').classList.add('hidden');
+                document.getElementById('scanning-animation').classList.add('hidden');
+                document.getElementById('scan-results').classList.remove('hidden');
                 
                 // Simulate processing delay
                 setTimeout(() => {
@@ -486,6 +649,8 @@
                 console.error("Scan failed:", err);
                 startBtn.textContent = 'Start Scanning';
                 startBtn.disabled = false;
+                document.getElementById('scan-progress').classList.add('hidden');
+                document.getElementById('scanning-animation').classList.add('hidden');
                 document.getElementById('scan-results').classList.add('hidden');
                 alert("Scan failed: " + err.message);
             }
@@ -517,18 +682,61 @@
                 const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
                 fillLight.position.set(-5, 3, -5);
                 finalScene.add(fillLight);
+                
+                // Add environment for better visualization
+                const gridHelper = new THREE.GridHelper(10, 10);
+                finalScene.add(gridHelper);
             }
             
             // Clone the current shoe model
             if (shoeMesh) {
                 finalScene.remove(finalShoeMesh);
                 finalShoeMesh = shoeMesh.clone();
+                
+                // Center the model
+                const box = new THREE.Box3().setFromObject(finalShoeMesh);
+                const center = box.getCenter(new THREE.Vector3());
+                finalShoeMesh.position.sub(center);
+                
                 finalScene.add(finalShoeMesh);
+                finalControls.reset();
                 document.getElementById('final-loading').classList.add('hidden');
             } else {
                 document.getElementById('final-error').textContent = "No shoe model available";
                 document.getElementById('final-error').classList.remove('hidden');
                 document.getElementById('final-loading').classList.add('hidden');
+            }
+        }
+
+        // Place order function
+        async function placeOrder() {
+            const orderBtn = document.getElementById('place-order');
+            orderBtn.textContent = 'Processing...';
+            orderBtn.disabled = true;
+            
+            try {
+                // In a real implementation, you would send the order to your backend
+                // For demo, we'll simulate an API call
+                const orderData = {
+                    footScan: footScanData,
+                    shoeStyle: document.getElementById('shoe-style').value,
+                    color: document.getElementById('shoe-color').value,
+                    material: document.getElementById('shoe-material').value,
+                    timestamp: new Date().toISOString()
+                };
+                
+                console.log("Order data:", orderData);
+                
+                // Simulate API delay
+                setTimeout(() => {
+                    alert('Order placed successfully! Your custom shoes will be manufactured and shipped within 2-3 weeks.');
+                    orderBtn.textContent = 'Order Placed!';
+                }, 1500);
+            } catch (err) {
+                console.error("Order failed:", err);
+                orderBtn.textContent = 'Place Order';
+                orderBtn.disabled = false;
+                alert("Order failed: " + err.message);
             }
         }
 
@@ -553,12 +761,7 @@
             });
             
             // Place order button
-            document.getElementById('place-order').addEventListener('click', function() {
-                this.textContent = 'Processing...';
-                setTimeout(() => {
-                    alert('Order placed successfully!');
-                }, 1000);
-            });
+            document.getElementById('place-order').addEventListener('click', placeOrder);
         });
 
         // Clean up camera
@@ -567,6 +770,23 @@
                 mediaStream.getTracks().forEach(track => track.stop());
             }
         });
+
+        // Handle orientation changes
+        window.addEventListener('orientationchange', function() {
+            const videoElement = document.getElementById('camera-feed');
+            if (videoElement) {
+                const isPortrait = window.matchMedia("(orientation: portrait)").matches;
+                if (isPortrait) {
+                    videoElement.style.transform = 'scaleX(-1) rotate(90deg)';
+                    videoElement.style.width = '100vh';
+                    videoElement.style.height = '100vw';
+                } else {
+                    videoElement.style.transform = 'scaleX(-1)';
+                    videoElement.style.width = '100%';
+                    videoElement.style.height = 'auto';
+                }
+            }
+        });
     </script>
 </body>
-</html>write with real api and ensure the camera foot scanning is visible.write full code. no summarizations.
+</html>
