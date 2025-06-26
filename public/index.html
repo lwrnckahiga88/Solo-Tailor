@@ -348,7 +348,7 @@
         
         // Configuration
         const config = {
-            API_BASE: 'https://api.3dlook.ai/v1',
+            API_BASE: 'https://api.3dlook.com/v1',  // Updated 3DLook API endpoint
             API_KEY: 'YOUR_3DLOOK_API_KEY',
             MOCK_MODE: window.location.search.includes('mock=true')
         };
@@ -408,7 +408,7 @@
                     formData.append('images', file);
                 });
 
-                const response = await fetch(`${config.API_BASE}/scans`, {
+                const response = await fetch(`${config.API_BASE}/foot-scans`, {  // Updated endpoint
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${config.API_KEY}`
@@ -420,10 +420,10 @@
                 
                 const scanResult = await response.json();
                 footScanData = {
-                    scanId: scanResult.scanId,
-                    footLength: scanResult.measurements.footLength,
-                    footWidth: scanResult.measurements.footWidth,
-                    meshUrl: scanResult.meshUrl
+                    scanId: scanResult.scan_id,  // Updated property name
+                    footLength: scanResult.measurements.foot_length,  // Updated property name
+                    footWidth: scanResult.measurements.foot_width,  // Updated property name
+                    meshUrl: scanResult.mesh_url  // Updated property name
                 };
                 
                 showCustomizationView();
@@ -461,34 +461,37 @@
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
                 const ctx = canvas.getContext('2d');
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                 
                 // Capture multiple angles for 3D reconstruction
                 const angles = [];
                 for (let i = 0; i < 3; i++) {
-                    await new Promise(resolve => setTimeout(resolve, 500));
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    angles.push(canvas.toDataURL('image/jpeg'));
+                    const imageData = canvas.toDataURL('image/jpeg');
+                    angles.push(imageData.split(',')[1]); // Extract base64 data
+                    await new Promise(resolve => setTimeout(resolve, 500));
                 }
 
                 // Call 3DLook API
-                const response = await fetch(`${config.API_BASE}/scans`, {
+                const response = await fetch(`${config.API_BASE}/foot-scans`, {  // Updated endpoint
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${config.API_KEY}`
                     },
-                    body: JSON.stringify({ images: angles })
+                    body: JSON.stringify({ 
+                        images: angles,
+                        scan_type: 'foot'  // Specify foot scanning
+                    })
                 });
                 
                 if (!response.ok) throw new Error('3D scan processing failed');
                 
                 const scanResult = await response.json();
                 footScanData = {
-                    scanId: scanResult.scanId,
-                    footLength: scanResult.measurements.footLength,
-                    footWidth: scanResult.measurements.footWidth,
-                    meshUrl: scanResult.meshUrl
+                    scanId: scanResult.scan_id,  // Updated property name
+                    footLength: scanResult.measurements.foot_length,  // Updated property name
+                    footWidth: scanResult.measurements.foot_width,  // Updated property name
+                    meshUrl: scanResult.mesh_url  // Updated property name
                 };
                 
                 showCustomizationView();
@@ -580,24 +583,24 @@
             document.getElementById('customization-error').classList.add('hidden');
             
             try {
-                const response = await fetch(`${config.API_BASE}/generate-shoe`, {
+                const response = await fetch(`${config.API_BASE}/custom-shoes`, {  // Updated endpoint
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${config.API_KEY}`
                     },
                     body: JSON.stringify({ 
-                        scanId: footScanData.scanId,
+                        scan_id: footScanData.scanId,  // Updated property name
                         style,
-                        color,
+                        color: color.substring(1),  // Remove # from hex color
                         material
                     })
                 });
                 
                 if (!response.ok) throw new Error('Failed to generate shoe model');
                 
-                const { modelUrl } = await response.json();
-                loadModel(modelUrl, color, material);
+                const { model_url } = await response.json();  // Updated property name
+                loadModel(model_url, color, material);
                 
             } catch (err) {
                 console.error("Error:", err);
