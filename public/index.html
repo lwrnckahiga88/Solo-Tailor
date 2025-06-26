@@ -3,54 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SoloTailor AI - Perfect Foot Scanning</title>
+    <title>SoloTailor AI - Professional 3D Footwear Customization</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
+        :root {
+            --primary: #6d28d9;
+            --primary-light: #8b5cf6;
+            --secondary: #10b981;
+            --dark: #1e293b;
+            --light: #f8fafc;
+            --gray: #94a3b8;
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        
+
         body {
-            background-color: #f8f9fa;
-            padding: 20px;
-            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: var(--dark);
+            line-height: 1.6;
+            min-height: 100vh;
         }
-        
+
+        .app-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
         header {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 2rem;
+            color: white;
         }
-        
-        h1 {
-            color: #6d28d9;
-            margin-bottom: 8px;
+
+        header h1 {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
-        
+
+        header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        /* Scanning Section */
         .scan-section {
-            max-width: 500px;
-            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 1.5rem;
+            padding: 2.5rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
-        
+
         .scan-container {
             position: relative;
             width: 100%;
-            background-color: #000;
-            border-radius: 12px;
-            overflow: hidden;
-            aspect-ratio: 3/4; /* Better for foot scanning */
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            max-width: 600px;
+            margin: 0 auto;
         }
-        
+
         #camera-feed {
             width: 100%;
-            height: 100%;
+            border-radius: 1rem;
             display: block;
-            object-fit: cover;
-            transform: scaleX(-1); /* Mirror effect */
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
-        
+
         .scan-overlay {
             position: absolute;
             top: 0;
@@ -58,200 +84,733 @@
             width: 100%;
             height: 100%;
             pointer-events: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
-        
-        .foot-guidelines {
-            position: absolute;
-            top: 10%;
-            left: 15%;
-            width: 70%;
-            height: 80%;
-            border: 3px dashed rgba(109, 40, 217, 0.8);
-            border-radius: 40% 40% 20% 20%;
+
+        .foot-outline {
+            width: 60%;
+            height: 70%;
+            border: 3px dashed var(--primary);
+            border-radius: 20% 20% 50% 50%;
             animation: pulse 2s infinite;
         }
-        
+
         @keyframes pulse {
-            0%, 100% { border-color: rgba(109, 40, 217, 0.8); }
-            50% { border-color: rgba(139, 92, 246, 0.8); }
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
         }
-        
-        .alignment-markers {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-        }
-        
-        .marker {
-            position: absolute;
-            width: 16px;
-            height: 16px;
-            background-color: rgba(109, 40, 217, 0.6);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-        }
-        
-        .toe-marker {
-            top: 15%;
-            left: 50%;
-        }
-        
-        .heel-marker {
-            bottom: 10%;
-            left: 50%;
-        }
-        
-        .side-marker-left {
-            top: 50%;
-            left: 20%;
-        }
-        
-        .side-marker-right {
-            top: 50%;
-            right: 20%;
-        }
-        
-        .instructions {
+
+        .scan-instructions {
             text-align: center;
-            margin-top: 16px;
-            color: #555;
-            font-size: 15px;
+            margin: 1.5rem 0;
         }
-        
-        .action-btn {
-            display: block;
+
+        /* Customization Section */
+        .customization-section {
+            display: none;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 1.5rem;
+            padding: 2.5rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .customizer-container {
+            display: flex;
+            gap: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .customizer-container {
+                flex-direction: column;
+            }
+        }
+
+        .visualization-panel {
+            flex: 2;
+            position: relative;
+        }
+
+        #shoe-canvas {
             width: 100%;
-            max-width: 500px;
-            margin: 20px auto 0;
-            padding: 12px;
-            background-color: #6d28d9;
-            color: white;
+            height: 500px;
+            background: linear-gradient(145deg, #f0f0f0, #ffffff);
+            border-radius: 1rem;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .customization-panel {
+            flex: 1;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(109, 40, 217, 0.1);
+        }
+
+        /* Final Product Section */
+        .final-section {
+            display: none;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 1.5rem;
+            padding: 2.5rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .final-view-container {
+            display: flex;
+            gap: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .final-view-container {
+                flex-direction: column;
+            }
+        }
+
+        #final-shoe-canvas {
+            flex: 1;
+            height: 500px;
+            background: linear-gradient(145deg, #f0f0f0, #ffffff);
+            border-radius: 1rem;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .final-details {
+            flex: 1;
+        }
+
+        /* Common styles */
+        .btn {
+            padding: 1rem 2rem;
             border: none;
-            border-radius: 8px;
-            font-size: 16px;
+            border-radius: 0.75rem;
+            font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
-        
-        .action-btn:hover {
-            background-color: #5b21b6;
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            box-shadow: 0 4px 15px rgba(109, 40, 217, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(109, 40, 217, 0.4);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Loading states */
+        .spinner {
+            width: 40px;
+            height: 40px;
+            margin: 2rem auto;
+            border: 4px solid rgba(109, 40, 217, 0.1);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Model Controls */
+        .model-controls {
+            position: absolute;
+            bottom: 1rem;
+            left: 1rem;
+            z-index: 10;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .model-controls button {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+
+        .model-controls button:hover {
+            transform: scale(1.1);
+            background: white;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            color: var(--dark);
+            text-align: center;
+        }
+
+        .api-status {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .api-status.connected {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .api-status.error {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
         }
     </style>
 </head>
 <body>
-    <header>
-        <h1>SoloTailor AI</h1>
-        <p>Perfect foot scanning & 3D customization</p>
-    </header>
-    
-    <section class="scan-section">
-        <div class="scan-container">
-            <video id="camera-feed" autoplay playsinline></video>
-            <div class="scan-overlay">
-                <div class="foot-guidelines">
-                    <div class="alignment-markers">
-                        <div class="marker toe-marker"></div>
-                        <div class="marker heel-marker"></div>
-                        <div class="marker side-marker-left"></div>
-                        <div class="marker side-marker-right"></div>
-                    </div>
+    <div class="app-container">
+        <header>
+            <h1>SoloTailor AI</h1>
+            <p>Professional 3D Footwear Customization with 3DLook Technology</p>
+        </header>
+
+        <!-- Scanning Section -->
+        <section class="scan-section" id="scan-section">
+            <h2 class="section-title">1. 3D Foot Scanning</h2>
+            <div id="api-status" class="api-status">
+                Connecting to 3DLook API...
+            </div>
+            <div class="scan-container">
+                <video id="camera-feed" autoplay playsinline></video>
+                <div class="scan-overlay">
+                    <div class="foot-outline"></div>
                 </div>
             </div>
-        </div>
-        
-        <p class="instructions">
-            Align your foot with the markers:<br>
-            Toes at top • Heel at bottom • Sides centered
-        </p>
-        
-        <button class="action-btn" id="capture-btn">Capture Foot Scan</button>
-    </section>
+            <div class="scan-instructions">
+                <p>Position your foot within the outline and hold still for 3D scanning</p>
+                <button id="start-scan" class="btn btn-primary">Start 3D Scan</button>
+            </div>
+            
+            <div id="scan-results" class="hidden">
+                <div class="spinner"></div>
+                <p style="text-align: center;">Processing 3D foot scan with 3DLook technology...</p>
+            </div>
+        </section>
+
+        <!-- Customization Section -->
+        <section class="customization-section" id="customization-section">
+            <h2 class="section-title">2. Design Your Custom Shoe</h2>
+            <div class="customizer-container">
+                <div class="visualization-panel">
+                    <canvas id="shoe-canvas"></canvas>
+                    <div class="model-controls">
+                        <button id="rotate-left" title="Rotate Left">↺</button>
+                        <button id="rotate-right" title="Rotate Right">↻</button>
+                        <button id="reset-view" title="Reset View">⌂</button>
+                    </div>
+                </div>
+                
+                <div class="customization-panel">
+                    <div class="form-group">
+                        <label for="shoe-style">Shoe Style</label>
+                        <select id="shoe-style" class="form-control">
+                            <option value="sneaker">Athletic Sneaker</option>
+                            <option value="runner">Performance Runner</option>
+                            <option value="dress">Dress Shoe</option>
+                            <option value="boot">Casual Boot</option>
+                            <option value="loafer">Loafer</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="shoe-color">Primary Color</label>
+                        <input type="color" id="shoe-color" value="#2563eb" class="form-control">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="accent-color">Accent Color</label>
+                        <input type="color" id="accent-color" value="#ffffff" class="form-control">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="shoe-material">Material</label>
+                        <select id="shoe-material" class="form-control">
+                            <option value="leather">Premium Leather</option>
+                            <option value="knit">Breathable Knit</option>
+                            <option value="mesh">Performance Mesh</option>
+                            <option value="suede">Soft Suede</option>
+                            <option value="canvas">Durable Canvas</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="sole-type">Sole Type</label>
+                        <select id="sole-type" class="form-control">
+                            <option value="standard">Standard</option>
+                            <option value="cushioned">Extra Cushioned</option>
+                            <option value="performance">Performance</option>
+                            <option value="dress">Dress Sole</option>
+                        </select>
+                    </div>
+                    
+                    <button id="view-final" class="btn btn-primary">View Final Design</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Final Product Section -->
+        <section class="final-section" id="final-section">
+            <h2 class="section-title">3. Your Custom Shoe</h2>
+            <div class="final-view-container">
+                <canvas id="final-shoe-canvas"></canvas>
+                <div class="final-details">
+                    <h3>Design Specifications</h3>
+                    <div id="design-specs" style="margin-bottom: 1.5rem;">
+                        <!-- Filled by JavaScript -->
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <strong>Estimated Price: $299</strong>
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <strong>Delivery: 2-3 weeks</strong>
+                    </div>
+                    <button id="place-order" class="btn btn-primary">Place Order</button>
+                    <button id="back-to-edit" class="btn btn-secondary">Edit Design</button>
+                </div>
+            </div>
+        </section>
+    </div>
 
     <script>
-        // Camera setup with perfect alignment
-        async function setupCamera() {
+        // 3DLook API Configuration
+        const THREELOOK_CONFIG = {
+            apiKey: 'your_3dlook_api_key_here', // Replace with your actual API key
+            apiUrl: 'https://api.3dlook.me/v1',
+            endpoints: {
+                scan: '/scan/foot',
+                measurements: '/measurements',
+                model: '/model/generate'
+            }
+        };
+
+        // Global variables
+        let mediaStream;
+        let scene, camera, renderer, shoeModel, controls;
+        let finalScene, finalCamera, finalRenderer, finalControls;
+        let footMeasurements = null;
+        let currentRotation = 0;
+        const rotationSpeed = 0.02;
+        
+        // Advanced shoe models with proper geometry
+        const SHOE_MODELS = {
+            sneaker: {
+                geometry: createSneakerGeometry,
+                texture: 'athletic'
+            },
+            runner: {
+                geometry: createRunnerGeometry,
+                texture: 'performance'
+            },
+            dress: {
+                geometry: createDressShoeGeometry,
+                texture: 'formal'
+            },
+            boot: {
+                geometry: createBootGeometry,
+                texture: 'casual'
+            },
+            loafer: {
+                geometry: createLoaferGeometry,
+                texture: 'comfort'
+            }
+        };
+
+        // Initialize 3DLook API connection
+        async function initialize3DLookAPI() {
+            const statusElement = document.getElementById('api-status');
+            
             try {
-                const video = document.getElementById('camera-feed');
-                
-                // Get all camera devices
-                const devices = await navigator.mediaDevices.enumerateDevices();
-                const videoDevices = devices.filter(device => device.kind === 'videoinput');
-                
-                // Try to find rear camera first
-                const rearCamera = videoDevices.find(device => 
-                    device.label.toLowerCase().includes('back') || 
-                    device.label.toLowerCase().includes('rear')
-                );
-                
-                const constraints = {
-                    video: {
-                        deviceId: rearCamera ? { exact: rearCamera.deviceId } : undefined,
-                        width: { ideal: 1280 },
-                        height: { ideal: 960 },
-                        facingMode: rearCamera ? undefined : 'environment'
+                // Test API connection
+                const response = await fetch(`${THREELOOK_CONFIG.apiUrl}/status`, {
+                    headers: {
+                        'Authorization': `Bearer ${THREELOOK_CONFIG.apiKey}`,
+                        'Content-Type': 'application/json'
                     }
-                };
-                
-                const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                video.srcObject = stream;
-                
-                // Handle different device orientations
-                const handleOrientationChange = () => {
-                    const orientation = window.screen.orientation.type;
-                    let transform = 'scaleX(-1)'; // Always mirror
-                    
-                    if (orientation.includes('landscape')) {
-                        transform += ' rotate(90deg)';
-                    }
-                    
-                    video.style.transform = transform;
-                };
-                
-                // Initial orientation setup
-                handleOrientationChange();
-                
-                // Listen for orientation changes
-                window.screen.orientation?.addEventListener('change', handleOrientationChange);
-                
-                return new Promise((resolve) => {
-                    video.onloadedmetadata = () => {
-                        video.play().then(resolve).catch(err => {
-                            console.error("Video play error:", err);
-                            resolve();
-                        });
-                    };
                 });
                 
-            } catch (err) {
-                console.error("Camera setup error:", err);
-                alert("Camera access error. Please enable permissions and try again.");
-                throw err;
+                if (response.ok) {
+                    statusElement.className = 'api-status connected';
+                    statusElement.textContent = '✅ 3DLook API Connected Successfully';
+                } else {
+                    throw new Error('API connection failed');
+                }
+            } catch (error) {
+                console.error('3DLook API Error:', error);
+                statusElement.className = 'api-status error';
+                statusElement.textContent = '⚠️ 3DLook API Connection Error - Using Demo Mode';
             }
         }
-        
-        // Initialize everything when DOM loads
-        document.addEventListener('DOMContentLoaded', async () => {
+
+        // Initialize camera for scanning
+        async function initCamera() {
             try {
-                await setupCamera();
-                
-                document.getElementById('capture-btn').addEventListener('click', () => {
-                    alert('Foot scan captured successfully!');
-                    // Here you would normally process the scan
+                mediaStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    } 
+                });
+                const videoElement = document.getElementById('camera-feed');
+                videoElement.srcObject = mediaStream;
+            } catch (err) {
+                console.error("Camera error:", err);
+                alert("Could not access camera. Please enable camera permissions.");
+                document.querySelector('.scan-instructions').innerHTML = `
+                    <p>Camera access denied. Please upload foot photos instead:</p>
+                    <input type="file" id="foot-upload" accept="image/*" multiple style="display: none;">
+                    <button class="btn btn-primary" onclick="document.getElementById('foot-upload').click()">Upload Foot Photos</button>
+                `;
+            }
+        }
+
+        // Create advanced sneaker geometry
+        function createSneakerGeometry() {
+            const group = new THREE.Group();
+            
+            // Main shoe body
+            const bodyGeometry = new THREE.CapsuleGeometry(0.4, 2, 4, 8);
+            const bodyMaterial = new THREE.MeshStandardMaterial({ 
+                color: document.getElementById('shoe-color').value,
+                roughness: 0.3,
+                metalness: 0.1
+            });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.rotation.z = Math.PI / 2;
+            body.position.y = 0.4;
+            group.add(body);
+            
+            // Sole
+            const soleGeometry = new THREE.CylinderGeometry(0.6, 0.7, 0.3, 16);
+            const soleMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x333333,
+                roughness: 0.8
+            });
+            const sole = new THREE.Mesh(soleGeometry, soleMaterial);
+            sole.position.y = 0.15;
+            group.add(sole);
+            
+            // Toe cap
+            const toeCapGeometry = new THREE.SphereGeometry(0.4, 16, 8, 0, Math.PI);
+            const toeCapMaterial = new THREE.MeshStandardMaterial({ 
+                color: document.getElementById('accent-color').value,
+                roughness: 0.4
+            });
+            const toeCap = new THREE.Mesh(toeCapGeometry, toeCapMaterial);
+            toeCap.position.set(1, 0.4, 0);
+            toeCap.rotation.z = Math.PI / 2;
+            group.add(toeCap);
+            
+            // Laces
+            for (let i = 0; i < 6; i++) {
+                const laceGeometry = new THREE.CylinderGeometry(0.02, 0.02, 0.4);
+                const laceMaterial = new THREE.MeshStandardMaterial({ color: 0x654321 });
+                const lace = new THREE.Mesh(laceGeometry, laceMaterial);
+                lace.position.set(0.2 - i * 0.2, 0.7, 0);
+                lace.rotation.z = Math.PI / 2;
+                group.add(lace);
+            }
+            
+            return group;
+        }
+
+        // Create runner geometry
+        function createRunnerGeometry() {
+            const group = new THREE.Group();
+            
+            // Streamlined body
+            const bodyGeometry = new THREE.CapsuleGeometry(0.35, 2.2, 4, 12);
+            const bodyMaterial = new THREE.MeshStandardMaterial({ 
+                color: document.getElementById('shoe-color').value,
+                roughness: 0.2,
+                metalness: 0.05
+            });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.rotation.z = Math.PI / 2;
+            body.position.y = 0.35;
+            group.add(body);
+            
+            // Performance sole
+            const soleGeometry = new THREE.CylinderGeometry(0.55, 0.65, 0.4, 20);
+            const soleMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x222222,
+                roughness: 0.9
+            });
+            const sole = new THREE.Mesh(soleGeometry, soleMaterial);
+            sole.position.y = 0.2;
+            group.add(sole);
+            
+            // Air vents
+            for (let i = 0; i < 8; i++) {
+                const ventGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.1);
+                const ventMaterial = new THREE.MeshStandardMaterial({ color: 0x111111 });
+                const vent = new THREE.Mesh(ventGeometry, ventMaterial);
+                vent.position.set(
+                    -0.5 + i * 0.15,
+                    0.5,
+                    Math.sin(i * 0.5) * 0.2
+                );
+                group.add(vent);
+            }
+            
+            return group;
+        }
+
+        // Create dress shoe geometry
+        function createDressShoeGeometry() {
+            const group = new THREE.Group();
+            
+            // Elegant body
+            const bodyGeometry = new THREE.CapsuleGeometry(0.38, 1.8, 4, 10);
+            const bodyMaterial = new THREE.MeshStandardMaterial({ 
+                color: document.getElementById('shoe-color').value,
+                roughness: 0.1,
+                metalness: 0.3
+            });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.rotation.z = Math.PI / 2;
+            body.position.y = 0.38;
+            group.add(body);
+            
+            // Formal sole
+            const soleGeometry = new THREE.CylinderGeometry(0.5, 0.52, 0.15, 16);
+            const soleMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x2d1810,
+                roughness: 0.6,
+                metalness: 0.1
+            });
+            const sole = new THREE.Mesh(soleGeometry, soleMaterial);
+            sole.position.y = 0.075;
+            group.add(sole);
+            
+            // Brogue details
+            for (let i = 0; i < 12; i++) {
+                const brogueFGeometry = new THREE.SphereGeometry(0.02, 8, 8);
+                const brogueMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+                const brogue = new THREE.Mesh(brogueFGeometry, brogueMaterial);
+                brogue.position.set(
+                    0.5 + Math.cos(i * 0.5) * 0.3,
+                    0.5,
+                    Math.sin(i * 0.5) * 0.2
+                );
+                group.add(brogue);
+            }
+            
+            return group;
+        }
+
+        // Create boot geometry
+        function createBootGeometry() {
+            const group = new THREE.Group();
+            
+            // Boot body
+            const bodyGeometry = new THREE.CapsuleGeometry(0.42, 1.9, 4, 8);
+            const bodyMaterial = new THREE.MeshStandardMaterial({ 
+                color: document.getElementById('shoe-color').value,
+                roughness: 0.6,
+                metalness: 0.05
+            });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.rotation.z = Math.PI / 2;
+            body.position.y = 0.42;
+            group.add(body);
+            
+            // Boot shaft
+            const shaftGeometry = new THREE.CylinderGeometry(0.45, 0.5, 0.8, 12);
+            const shaftMaterial = new THREE.MeshStandardMaterial({ 
+                color: document.getElementById('shoe-color').value,
+                roughness: 0.6
+            });
+            const shaft = new THREE.Mesh(shaftGeometry, shaftMaterial);
+            shaft.position.set(-0.3, 0.8, 0);
+            group.add(shaft);
+            
+            // Rugged sole
+            const soleGeometry = new THREE.CylinderGeometry(0.6, 0.7, 0.4, 12);
+            const soleMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x3a3a3a,
+                roughness: 1.0
+            });
+            const sole = new THREE.Mesh(soleGeometry, soleMaterial);
+            sole.position.y = 0.2;
+            group.add(sole);
+            
+            return group;
+        }
+
+        // Create loafer geometry
+        function createLoaferGeometry() {
+            const group = new THREE.Group();
+            
+            // Loafer body
+            const bodyGeometry = new THREE.CapsuleGeometry(0.36, 1.7, 4, 10);
+            const bodyMaterial = new THREE.MeshStandardMaterial({ 
+                color: document.getElementById('shoe-color').value,
+                roughness: 0.2,
+                metalness: 0.2
+            });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.rotation.z = Math.PI / 2;
+            body.position.y = 0.36;
+            group.add(body);
+            
+            // Comfortable sole
+            const soleGeometry = new THREE.CylinderGeometry(0.48, 0.5, 0.2, 16);
+            const soleMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x8B4513,
+                roughness: 0.7
+            });
+            const sole = new THREE.Mesh(soleGeometry, soleMaterial);
+            sole.position.y = 0.1;
+            group.add(sole);
+            
+            // Penny strap
+            const strapGeometry = new THREE.BoxGeometry(0.3, 0.05, 0.4);
+            const strapMaterial = new THREE.MeshStandardMaterial({ 
+                color: document.getElementById('accent-color').value,
+                roughness: 0.3
+            });
+            const strap = new THREE.Mesh(strapGeometry, strapMaterial);
+            strap.position.set(0.3, 0.6, 0);
+            group.add(strap);
+            
+            return group;
+        }
+
+        // Process 3D foot scan with 3DLook API
+        async function process3DFootScan(imageData) {
+            try {
+                const response = await fetch(`${THREELOOK_CONFIG.apiUrl}${THREELOOK_CONFIG.endpoints.scan}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${THREELOOK_CONFIG.apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        image: imageData,
+                        analysis_type: 'foot_measurements',
+                        units: 'cm'
+                    })
                 });
                 
-            } catch (err) {
-                console.error("Initialization error:", err);
+                if (!response.ok) {
+                    throw new Error('3DLook API request failed');
+                }
+                
+                const data = await response.json();
+                footMeasurements = data.measurements;
+                
+                return {
+                    success: true,
+                    measurements: data.measurements,
+                    model3d: data.model3d_url
+                };
+            } catch (error) {
+                console.error('3DLook API Error:', error);
+                // Fallback to demo measurements
+                footMeasurements = {
+                    length: 26.5,
+                    width: 10.2,
+                    height: 6.8,
+                    arch_height: 2.4
+                };
+                return {
+                    success: false,
+                    measurements: footMeasurements,
+                    error: error.message
+                };
             }
-        });
-        
-        // Clean up camera stream when leaving
-        window.addEventListener('beforeunload', () => {
-            const video = document.getElementById('camera-feed');
-            if (video.srcObject) {
-                video.srcObject.getTracks().forEach(track => track.stop());
-            }
-        });
-    </script>
-</body>
-</html>
+        }
+
+        // Initialize 3D shoe viewer
+        function initShoeViewer() {
+            const canvas = document.getElementById('shoe-canvas');
+            
+            // Scene setup
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf0f0f0);
+            
+            // Camera setup
+            camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+            camera.position.set(3, 2, 3);
+            
+            // Renderer setup
+            renderer = new THREE.WebGLRenderer({ 
+                canvas, 
+                antialias: true,
+                alpha: true
+            });
+            renderer.setSize(canvas.clientWidth, canvas.height);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            
+            // Enhanced lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 10, 5);
+            directionalLight.castShadow = true;
+            directionalLight
