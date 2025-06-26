@@ -87,6 +87,7 @@
             height: 100%;
             display: block;
             object-fit: cover;
+            transform: scaleX(-1); /* Mirror the camera feed */
         }
 
         .scan-overlay {
@@ -102,34 +103,19 @@
             align-items: center;
         }
 
-        .scan-guidelines {
-            width: 80%;
-            height: 80%;
-            border: 3px solid rgba(109, 40, 217, 0.5);
-            border-radius: 10px;
+        .foot-outline {
             position: relative;
+            width: 70%;
+            height: 80%;
+            border: 3px dashed var(--primary);
+            border-radius: 20% 20% 50% 50%;
+            animation: pulse 2s infinite;
         }
 
-        .scan-guidelines::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: rgba(109, 40, 217, 0.5);
-            transform: translateY(-50%);
-        }
-
-        .scan-guidelines::after {
-            content: '';
-            position: absolute;
-            left: 50%;
-            top: 0;
-            bottom: 0;
-            width: 3px;
-            background: rgba(109, 40, 217, 0.5);
-            transform: translateX(-50%);
+        @keyframes pulse {
+            0% { border-color: var(--primary); }
+            50% { border-color: var(--primary-light); }
+            100% { border-color: var(--primary); }
         }
 
         .scan-instructions {
@@ -274,9 +260,9 @@
             <div class="scan-container">
                 <video id="camera-feed" autoplay playsinline></video>
                 <div class="scan-overlay">
-                    <div class="scan-guidelines"></div>
+                    <div class="foot-outline"></div>
                     <div class="scan-instructions">
-                        <p>Place your foot within the frame and hold still</p>
+                        <p>Place your foot inside the outline and hold still</p>
                     </div>
                 </div>
             </div>
@@ -345,10 +331,11 @@
         let mediaStream;
         let scene, camera, renderer, shoeMesh, controls;
         let footScanData = null;
+        let isScanning = false;
         
         // Configuration
         const config = {
-            API_BASE: 'https://api.3dlook.com/v1',  // Updated 3DLook API endpoint
+            API_BASE: 'https://api.3dlook.com/v1/foot-scans',
             API_KEY: 'YOUR_3DLOOK_API_KEY',
             MOCK_MODE: window.location.search.includes('mock=true')
         };
@@ -356,13 +343,15 @@
         // Initialize camera for scanning
         async function initCamera() {
             try {
-                mediaStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
+                const constraints = {
+                    video: {
                         facingMode: 'environment',
                         width: { ideal: 1280 },
                         height: { ideal: 960 }
-                    } 
-                });
+                    }
+                };
+
+                mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
                 const video = document.getElementById('camera-feed');
                 video.srcObject = mediaStream;
                 
@@ -408,7 +397,7 @@
                     formData.append('images', file);
                 });
 
-                const response = await fetch(`${config.API_BASE}/foot-scans`, {  // Updated endpoint
+                const response = await fetch(config.API_BASE, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${config.API_KEY}`
@@ -420,10 +409,10 @@
                 
                 const scanResult = await response.json();
                 footScanData = {
-                    scanId: scanResult.scan_id,  // Updated property name
-                    footLength: scanResult.measurements.foot_length,  // Updated property name
-                    footWidth: scanResult.measurements.foot_width,  // Updated property name
-                    meshUrl: scanResult.mesh_url  // Updated property name
+                    scanId: scanResult.scan_id,
+                    footLength: scanResult.measurements.foot_length,
+                    footWidth: scanResult.measurements.foot_width,
+                    meshUrl: scanResult.mesh_url
                 };
                 
                 showCustomizationView();
@@ -431,22 +420,36 @@
             } catch (err) {
                 console.error("Upload failed:", err);
                 showError('scan-error', "3D scan processing failed. Please try again.");
-                document.getElementById('start-scan').disabled = false;
+                resetScanButton();
             }
         }
 
         function startScanProcess() {
+            isScanning = true;
             document.getElementById('start-scan').disabled = true;
             document.getElementById('scan-progress').classList.remove('hidden');
             simulateScanProgress();
+        }
+
+        function resetScanButton() {
+            isScanning = false;
+            document.getElementById('start-scan').disabled = false;
+            document.getElementById('scan-progress').classList.add('hidden');
+            document.getElementById('progress-bar').style.width = '0%';
         }
 
         function simulateScanProgress() {
             const progressBar = document.getElementById('progress-bar');
             let progress = 0;
             const interval = setInterval(() => {
+                if (!isScanning) {
+                    clearInterval(interval);
+                    return;
+                }
+                
                 progress += 5;
                 progressBar.style.width = `${progress}%`;
+                
                 if (progress >= 100) {
                     clearInterval(interval);
                     process3DScan();
@@ -467,12 +470,12 @@
                 for (let i = 0; i < 3; i++) {
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                     const imageData = canvas.toDataURL('image/jpeg');
-                    angles.push(imageData.split(',')[1]); // Extract base64 data
+                    angles.push(imageData.split(',')[1]);
                     await new Promise(resolve => setTimeout(resolve, 500));
                 }
 
                 // Call 3DLook API
-                const response = await fetch(`${config.API_BASE}/foot-scans`, {  // Updated endpoint
+                const response = await fetch(config.API_BASE, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -480,7 +483,7 @@
                     },
                     body: JSON.stringify({ 
                         images: angles,
-                        scan_type: 'foot'  // Specify foot scanning
+                        scan_type: 'foot'
                     })
                 });
                 
@@ -488,10 +491,10 @@
                 
                 const scanResult = await response.json();
                 footScanData = {
-                    scanId: scanResult.scan_id,  // Updated property name
-                    footLength: scanResult.measurements.foot_length,  // Updated property name
-                    footWidth: scanResult.measurements.foot_width,  // Updated property name
-                    meshUrl: scanResult.mesh_url  // Updated property name
+                    scanId: scanResult.scan_id,
+                    footLength: scanResult.measurements.foot_length,
+                    footWidth: scanResult.measurements.foot_width,
+                    meshUrl: scanResult.mesh_url
                 };
                 
                 showCustomizationView();
@@ -499,7 +502,8 @@
             } catch (err) {
                 console.error("Scan processing error:", err);
                 showError('scan-error', "3D scan processing failed. Please try again.");
-                document.getElementById('start-scan').disabled = false;
+            } finally {
+                resetScanButton();
             }
         }
 
@@ -583,23 +587,23 @@
             document.getElementById('customization-error').classList.add('hidden');
             
             try {
-                const response = await fetch(`${config.API_BASE}/custom-shoes`, {  // Updated endpoint
+                const response = await fetch(`${config.API_BASE}/generate`, {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${config.API_KEY}`
                     },
                     body: JSON.stringify({ 
-                        scan_id: footScanData.scanId,  // Updated property name
+                        scan_id: footScanData.scanId,
                         style,
-                        color: color.substring(1),  // Remove # from hex color
+                        color: color.substring(1),
                         material
                     })
                 });
                 
                 if (!response.ok) throw new Error('Failed to generate shoe model');
                 
-                const { model_url } = await response.json();  // Updated property name
+                const { model_url } = await response.json();
                 loadModel(model_url, color, material);
                 
             } catch (err) {
