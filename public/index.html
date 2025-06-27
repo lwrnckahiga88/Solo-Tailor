@@ -1045,18 +1045,18 @@
             
             setTimeout(() => {
                 // This would typically generate a download link for a .glb or .obj file
-                alert("Model exported successfully! (Simulated for demo)");
-                document.getElementById('export-blender').textContent = "Export Complete";
+                // alert("Model exported successfully! (Simulated for demo)");
+                // document.getElementById('export-blender').textContent = "Export Complete";
                 
                 // In a real implementation, you might do something like:
-                // const exporter = new GLTFExporter();
-                // exporter.parse(shoeMesh, function(gltf) {
-                //     const blob = new Blob([gltf], {type: 'application/octet-stream'});
-                //     const link = document.createElement('a');
-                //     link.href = URL.createObjectURL(blob);
-                //     link.download = 'custom_shoe.glb';
-                //     link.click();
-                // });
+                     const exporter = new GLTFExporter();
+                     exporter.parse(shoeMesh, function(gltf) {
+                     const blob = new Blob([gltf], {type: 'application/octet-stream'});
+                     const link = document.createElement('a');
+                     link.href = URL.createObjectURL(blob);
+                     link.download = 'custom_shoe.glb';
+                     link.click();
+                 });
             }, 2000);
         }
 
